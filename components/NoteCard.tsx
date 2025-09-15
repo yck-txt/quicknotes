@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { Note, NoteType } from '../types';
 import { CodeIcon } from './icons/CodeIcon';
@@ -83,12 +82,17 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onEdit, onView }) =
   const { icon, label, borderColor } = typeConfig[note.type];
   const codeRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    if (note.type === NoteType.CODE && codeRef.current && window.hljs) {
-      window.hljs.highlightElement(codeRef.current);
+  const getHighlightedCode = (language: string, code: string): string => {
+    if (window.hljs) {
+      const lang = window.hljs.getLanguage(language) ? language : 'plaintext';
+      try {
+        return window.hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+      } catch (e) {
+        console.error("Highlight.js error:", e);
+      }
     }
-  }, [note.content, note.language, note.type]);
-
+    return code; // Return plain code if hljs is not available or fails
+  };
 
   const formatTimestamp = (isoString: string) => {
     return new Date(isoString).toLocaleString('de-DE', {
@@ -105,9 +109,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onEdit, onView }) =
 
   return (
     <div className={`group relative flex flex-col bg-white dark:bg-slate-800 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 border-t-4 ${borderColor}`}>
-      <div className="p-5 flex-grow">
+      <div className="p-5 flex-grow overflow-hidden">
         <div className="flex justify-between items-start mb-3">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 pr-20 break-words">
+          <h3 
+            className="text-lg font-bold text-slate-800 dark:text-slate-100 pr-20 truncate"
+            title={note.title}
+          >
             {note.title}
           </h3>
           <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 shrink-0">
@@ -117,22 +124,25 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onEdit, onView }) =
         </div>
 
         {note.type === NoteType.CODE ? (
-          <div className="bg-slate-900 dark:bg-black/50 p-3 rounded-md my-2 text-left">
+          <div className="relative max-h-48 overflow-hidden bg-slate-900 dark:bg-black/50 p-3 rounded-md my-2 text-left">
             <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words overflow-x-auto">
-              <code ref={codeRef} className={`language-${note.language || 'plaintext'}`}>
-                {note.content}
+              <code ref={codeRef} className={`language-${note.language || 'plaintext'}`} dangerouslySetInnerHTML={{ __html: getHighlightedCode(note.language || 'plaintext', note.content) }}>
               </code>
             </pre>
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-slate-900 dark:from-black to-transparent pointer-events-none"></div>
           </div>
         ) : (
-          <div 
-             className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap break-words"
-             dangerouslySetInnerHTML={{ __html: renderFormattedContent(note.content) }}
-           />
+          <div className="relative max-h-40 overflow-hidden">
+            <div
+              className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap break-words"
+              dangerouslySetInnerHTML={{ __html: renderFormattedContent(note.content) }}
+            />
+            <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none"></div>
+          </div>
         )}
       </div>
       
-      <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 rounded-b-lg">
+      <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 rounded-b-lg flex-shrink-0">
         <p className="text-xs text-slate-400 dark:text-slate-500">
           Erstellt: {formatTimestamp(note.createdAt)}
         </p>

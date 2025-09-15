@@ -8,7 +8,7 @@ const Header: React.FC = () => {
       <div className="container mx-auto px-4 md:px-6 py-4 flex items-center gap-3">
         <NoteIcon className="h-8 w-8 text-sky-500" />
         <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-          Schnelle Notizen
+          Yotez
         </h1>
       </div>
     </header>

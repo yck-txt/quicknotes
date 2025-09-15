@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { Note, NoteType } from '../types';
 import { CodeIcon } from './icons/CodeIcon';
@@ -70,15 +69,21 @@ const renderFormattedContent = (text: string) => {
   return newLines.join('<br />');
 };
 
-const NoteModal: React.FC<NoteModalProps> = ({ note, onClose }) => {
-  const codeRef = useRef<HTMLElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (note?.type === NoteType.CODE && codeRef.current && window.hljs) {
-      window.hljs.highlightElement(codeRef.current);
+const getHighlightedCode = (language: string, code: string): string => {
+  if (window.hljs) {
+    const lang = window.hljs.getLanguage(language) ? language : 'plaintext';
+    try {
+      return window.hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+    } catch (e) {
+      console.error("Highlight.js error:", e);
     }
-  }, [note]);
+  }
+  // Return plain code with HTML entities escaped if hljs is not available or fails
+  return code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+};
+
+const NoteModal: React.FC<NoteModalProps> = ({ note, onClose }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -132,7 +137,7 @@ const NoteModal: React.FC<NoteModalProps> = ({ note, onClose }) => {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300">
               {icon}
-              <span>{label}</span>
+              <span>{note.type === NoteType.CODE ? note.language || label : label}</span>
             </div>
             <h2 id="note-modal-title" className="text-xl font-bold text-slate-800 dark:text-slate-100">{note.title}</h2>
           </div>
@@ -152,8 +157,7 @@ const NoteModal: React.FC<NoteModalProps> = ({ note, onClose }) => {
           {note.type === NoteType.CODE ? (
             <div className="bg-slate-900 dark:bg-black/50 p-4 rounded-md text-left">
               <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words">
-                <code ref={codeRef} className={`language-${note.language || 'plaintext'}`}>
-                  {note.content}
+                <code className={`language-${note.language || 'plaintext'}`} dangerouslySetInnerHTML={{ __html: getHighlightedCode(note.language || 'plaintext', note.content) }}>
                 </code>
               </pre>
             </div>
